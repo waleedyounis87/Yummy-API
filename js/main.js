@@ -1,6 +1,5 @@
 let content = document.querySelector(".content");
 let rawData = document.querySelector(".rawData");
-let urlSearchUsingNameAPI = `https://www.themealdb.com/api/json/v1/1/search.php?s=`;
 $(document).ready(function() {
     getmealByName("").then(() =>{
         $(".inner-loading-screen").fadeOut(500)
@@ -36,123 +35,99 @@ let closeNav = () => {
         $(".list-item").eq(i).animate({top: 300}, (i + 7) * 100);
     }
 }
-//function for click search button
-$(".search-item").click(function(e){
-    
-   content.innerHTML = ``
-   content.innerHTML = `
-   <div class="d-flex gap-4 mt-4">
-   <div class="input-name w-50">
-       <input type="text" onkeyup="getmealByName(this.value)" name="name" id="name" placeholder="search by name" class="w-100 form-control">
-   </div>
-   <div class="input-letter w-50">
-       <input type="text" maxlength="1"  onkeyup="getmealByLetter(this.value)" name="name" id="name" placeholder="search by Letter" class="w-100 form-control">
-   </div>
-</div>
-   `;
-   e.preventDefault()
-   closeNav()
-   rawData.innerHTML = ""
-//    $(".inner-loading-screen").fadeOut("500");
-  
-});
-$(".category-item").click((e) => {
-    e.preventDefault()
+//refactoring click Event
+$(".list-item").click(function(e){
+    let tr = e.currentTarget.innerHTML;
+    e.preventDefault();
     closeNav()
-    getMealsByCategory()
-});
-$(".areas-item").click((e) => {
-    e.preventDefault()
-    closeNav()
-    getAreas()
+    console.log(e.currentTarget.innerHTML)
+    if(tr ===  "Search"){
+        content.innerHTML = ``
+        content.innerHTML = `
+                                <div class="d-flex gap-4 mt-4">
+                                    <div class="input-name w-50">
+                                        <input type="text" onkeyup="getmealByName(this.value)" name="name" id="name" placeholder="search by name" class="w-100 form-control">
+                                    </div>
+                                    <div class="input-letter w-50">
+                                        <input type="text" maxlength="1"  onkeyup="getmealByLetter(this.value)" name="name" id="name" placeholder="search by Letter" class="w-100 form-control">
+                                    </div>
+                                </div>
+                                `;
+        rawData.innerHTML = ""
+    }
+    else if( tr === "Categories"){
+            getMealsByCategory()
+            content.innerHTML =""
+        }
+        
+   else if(tr === "Areas"){
+            getAreas()
+            content.innerHTML =""
+        }
+        
+    else if(tr === "Ingredients"){
+            getIngredientsMealsShow()
+            content.innerHTML =""
+    }
+       
+    else if(tr === "Contact Us"){
+        showContacts()
+        content.innerHTML =""
+    }
+        
+
 })
-$(".ingred-item").click((e) => {
-    e.preventDefault()
-    closeNav()
-    getIngredientsMealsShow()
-})
-$(".contact-item").click((e) => {
-    e.preventDefault()
-    closeNav()
-    showContacts()
-})
-//function to get meal by name API
-async function getmealByName(name){
-    $(".inner-loading-screen").fadeIn("500");
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${name}`);
-    response = await response.json();
-    response.meals ? displayMealsByName(response.meals) : displayMealsByName([])
-   $(".inner-loading-screen").fadeOut("500");
+//Trying to refactoring Async Functions
+async function fetchData(apiEndpoint, displayFunction, data = null) {
+    $(".inner-loading-screen").fadeIn(500);
+    try {
+        let response;
+        if (data) {
+            response = await fetch(`https://www.themealdb.com/api/json/v1/1/${apiEndpoint}${data}`);
+        } else {
+            response = await fetch(`https://www.themealdb.com/api/json/v1/1/${apiEndpoint}`);
+        }
+        response = await response.json();
+       if (response.meals) {
+            displayFunction(response.meals.length !== 1 ? response.meals.slice(0, 20) : response.meals[0]);
+        } else if(response.categories){
+            displayFunction(response.categories);
+        }else{
+            displayFunction([])
+        }
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+
+    $(".inner-loading-screen").fadeOut(500);
 }
-async function getmealByLetter(letter){
-    $(".inner-loading-screen").fadeIn("500");
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?f=${letter}`);
-    response = await response.json();
-    response.meals ? displayMealsByName(response.meals) : displayMealsByName([])
-    $(".inner-loading-screen").fadeOut("500");
+async function getmealByName(name) {
+    await fetchData('search.php?s=', displayMealsByName, name);
 }
-async function getMealsByCategory(){
-    $(".inner-loading-screen").fadeIn("500");
-    content.innerHTML= ""
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/categories.php`);
-    response = await response.json();
-    displayMealsByCategory(response.categories)
-    $(".inner-loading-screen").fadeOut("500");
+async function getmealByLetter(letter) {
+    await fetchData('search.php?f=', displayMealsByName, letter);
+}
+async function getMealsByCategory() {
+    await fetchData('categories.php', displayMealsByCategory);
 }
 async function getCategoryMeals(category) {
-    $(".inner-loading-screen").fadeIn("500");
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${category}`)
-    response = await response.json()
-    displayMealsByName(response.meals.slice(0, 20))
-    $(".inner-loading-screen").fadeOut("500");
+    await fetchData('filter.php?c=', displayMealsByName, category);
 }
 async function getAreas() {
-    $(".inner-loading-screen").fadeIn("500");
-    content.innerHTML= ""
-    let respone = await fetch(`https://www.themealdb.com/api/json/v1/1/list.php?a=list`)
-    respone = await respone.json()
-    displayAreas(respone.meals)
-    $(".inner-loading-screen").fadeOut("500");
-
+    await fetchData('list.php?a=list', displayAreas);
 }
 async function getAreaMeals(area) {
-    $(".inner-loading-screen").fadeIn("500");
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?a=${area}`)
-    response = await response.json()
-    displayMealsByName(response.meals.slice(0, 20))
-    $(".inner-loading-screen").fadeOut("500");
+    await fetchData('filter.php?a=', displayMealsByName, area);
 }
-
 async function getIngredientsMealsShow() {
-    $(".inner-loading-screen").fadeIn("500");
-    content.innerHTML= ""
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/list.php?i=list`)
-    response = await response.json()
-    displayIngredients(response.meals.slice(0, 20))
-    $(".inner-loading-screen").fadeOut("500");
-
+    await fetchData('list.php?i=list', displayIngredients);
 }
 async function getIngredientsMeals(ingredients) {
-    //console.log(ingredients)
-    $(".inner-loading-screen").fadeIn("500");
-    let response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredients}`)
-    response = await response.json()
-    console.log(response.meals.slice(0, 20))
-    displayMealsByName(response.meals.slice(0, 20))
-    $(".inner-loading-screen").fadeOut("500");
-
+    await fetchData('filter.php?i=', displayMealsByName, ingredients);
 }
 async function getMealDetails(mealID) {
-    $(".inner-loading-screen").fadeIn("500");
-    content.innerHTML= ""
-    let respone = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealID}`);
-    respone = await respone.json();
-
-    displayMealDetails(respone.meals[0])
-    $(".inner-loading-screen").fadeOut("500");
+    await fetchData('lookup.php?i=', displayMealDetails, mealID);
 }
-
-
 //display Meals
 function displayMealsByName(arr){
     rawData.innerHTML = ""
@@ -241,9 +216,6 @@ function displayMealDetails(arr){
             tagsStr += `
             <li class="alert alert-danger m-2 p-1">${tags[i]}</li>`
         }
-    
-    
-    
         let meal = `
         <div class="col-md-4">
                     <img class="w-100 rounded-3 text-white" src="${arr.strMealThumb}"
@@ -354,75 +326,36 @@ let ageInputTouched = false;
 let passwordInputTouched = false;
 let repasswordInputTouched = false;
 
-
-
-
 function inputsValidation() {
-    if (nameInputTouched) {
-        if (nameValidation()) {
-            document.getElementById("nameAlert").classList.replace("d-block", "d-none")
+    validateAndToggleAlert(nameInputTouched, nameValidation, "nameAlert");
+    validateAndToggleAlert(emailInputTouched, emailValidation, "emailAlert");
+    validateAndToggleAlert(phoneInputTouched, phoneValidation, "phoneAlert");
+    validateAndToggleAlert(ageInputTouched, ageValidation, "ageAlert");
+    validateAndToggleAlert(passwordInputTouched, passwordValidation, "passwordAlert");
+    validateAndToggleAlert(repasswordInputTouched, repasswordValidation, "repasswordAlert");
 
+    toggleSubmitButton();
+}
+
+function validateAndToggleAlert(inputTouched, validationFunction, alertId) {
+    var alertElement = document.getElementById(alertId);
+    if (inputTouched) {
+        if (validationFunction()) {
+            alertElement.classList.replace("d-block", "d-none");
         } else {
-            document.getElementById("nameAlert").classList.replace("d-none", "d-block")
-
+            alertElement.classList.replace("d-none", "d-block");
         }
     }
-    if (emailInputTouched) {
+}
 
-        if (emailValidation()) {
-            document.getElementById("emailAlert").classList.replace("d-block", "d-none")
-        } else {
-            document.getElementById("emailAlert").classList.replace("d-none", "d-block")
-
-        }
-    }
-
-    if (phoneInputTouched) {
-        if (phoneValidation()) {
-            document.getElementById("phoneAlert").classList.replace("d-block", "d-none")
-        } else {
-            document.getElementById("phoneAlert").classList.replace("d-none", "d-block")
-
-        }
-    }
-
-    if (ageInputTouched) {
-        if (ageValidation()) {
-            document.getElementById("ageAlert").classList.replace("d-block", "d-none")
-        } else {
-            document.getElementById("ageAlert").classList.replace("d-none", "d-block")
-
-        }
-    }
-
-    if (passwordInputTouched) {
-        if (passwordValidation()) {
-            document.getElementById("passwordAlert").classList.replace("d-block", "d-none")
-        } else {
-            document.getElementById("passwordAlert").classList.replace("d-none", "d-block")
-
-        }
-    }
-    if (repasswordInputTouched) {
-        if (repasswordValidation()) {
-            document.getElementById("repasswordAlert").classList.replace("d-block", "d-none")
-        } else {
-            document.getElementById("repasswordAlert").classList.replace("d-none", "d-block")
-
-        }
-    }
-
-
-    if (nameValidation() &&
-        emailValidation() &&
-        phoneValidation() &&
-        ageValidation() &&
-        passwordValidation() &&
-        repasswordValidation()) {
-        submitBtn.removeAttribute("disabled")
-    } else {
-        submitBtn.setAttribute("disabled", true)
-    }
+function toggleSubmitButton() {
+    var isAllValid = nameValidation() &&
+                     emailValidation() &&
+                     phoneValidation() &&
+                     ageValidation() &&
+                     passwordValidation() &&
+                     repasswordValidation();
+    submitBtn.disabled = !isAllValid;
 }
 
 function nameValidation() {
